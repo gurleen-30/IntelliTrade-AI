@@ -1,6 +1,6 @@
 """S&P 500 companies list"""
 
-from matplotlib import ticker
+from matplotlib import ticker  # Go inside matplotlib Import ticker only
 
 
 SP500_COMPANIES = {
@@ -136,10 +136,14 @@ SP500_COMPANIES = {
     'DOG': 'Datadog Inc.'
 }
 
-def get_sp500_list():
+def get_sp500_list():      #get_sp500_list() : define a function
     """Returns list of S&P 500 tickers"""
-    return sorted(list(SP500_COMPANIES.keys()))
+    return sorted(list(SP500_COMPANIES.keys()))        
 
 def get_company_name(ticker):
     """Returns company name for ticker"""
     return SP500_COMPANIES.get(ticker, ticker)
+
+#A ticker (or ticker symbol) is a short code used to identify a company’s stock in the stock market.
+# list() used to convert the keys of the SP500_COMPANIES dictionary into a list, and then sorted() is used to sort that list alphabetically before returning it.
+# ticker is a unique series of letters assigned to a security or stock for trading purposes. It serves as an abbreviation for the company name and is used to identify the stock on exchanges and in financial markets.

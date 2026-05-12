@@ -1,4 +1,5 @@
 """Technical indicators calculation"""
+
 import pandas as pd
 import numpy as np
 from ta.trend import SMAIndicator, EMAIndicator, MACD
