@@ -22,27 +22,495 @@ st.set_page_config(page_title="IntelliTrade AI", page_icon="",
                    layout="wide", initial_sidebar_state="expanded")
 
 # ── Custom CSS ───────────────────────────────────────────────────────
+# [CHANGED] Completely rewritten load_css() to fix all dark mode text
+# visibility issues. Every Streamlit widget is now explicitly styled
+# for both Dark and Light themes.
 def load_css(theme):
-    if theme == "Dark":
-        bg, card, text = "#0E1117", "#262730", "#FAFAFA"
-    else:
-        bg, card, text = "#FFFFFF", "#FFFFFF", "#262730"
-    accent = "#FF6B6B"
-    st.markdown(f"""<style>
-    .stApp {{ background-color: {bg}; }}
-    h1,h2,h3,h4,h5,h6 {{ color: {text}; font-family:'Inter',sans-serif; }}
-    .metric-card {{ background:{card}; padding:20px; border-radius:10px;
-        box-shadow:0 2px 8px rgba(0,0,0,0.1); margin:10px 0; }}
-    .metric-value {{ font-size:2rem; font-weight:bold; color:{accent}; }}
-    .metric-label {{ font-size:0.9rem; color:{text}; opacity:0.7; }}
-    .stButton>button {{ background-color:{accent}; color:white; border-radius:8px;
-        padding:0.5rem 2rem; font-weight:600; border:none; transition:all .3s; }}
-    .stButton>button:hover {{ background-color:#FF5252; transform:translateY(-2px);
-        box-shadow:0 4px 12px rgba(255,107,107,0.3); }}
-    </style>""", unsafe_allow_html=True)
 
-# ── Session state ────────────────────────────────────────────────────
-for key, default in [('theme', 'Light'), ('trained_models', {}),
+    if theme == "Dark":
+        bg        = "#0E1117"       # Main background
+        sidebar   = "#111827"       # Sidebar background
+        card      = "#1A1F2E"       # Card / secondary background
+        card_border = "#2D3348"     # Subtle card border
+        text      = "#FFFFFF"       # Primary text
+        subtext   = "#D1D5DB"       # Secondary / muted text
+        accent    = "#2563EB"       # Accent blue
+        accent_hover = "#3B82F6"    # Accent blue hover
+        input_bg  = "#1E2536"       # Input / select background
+        input_border = "#374151"    # Input borders
+        hover_bg  = "#2A3144"       # Hover state background
+        success   = "#10B981"       # Success green
+        danger    = "#EF4444"       # Danger red
+        cyan      = "#00E5FF"       # Metric accent cyan
+        tab_active = "#FF6B6B"      # Active tab color
+        btn_text  = "#FFFFFF"       # White button text for dark mode
+
+    else:
+        # [CHANGED] Updated light theme palette per user spec for
+        # maximum readability — darker text, proper white backgrounds
+        bg        = "#F9FAFB"       # Soft white main background
+        sidebar   = "#FFFFFF"       # Pure white sidebar
+        card      = "#FFFFFF"       # Pure white cards
+        card_border = "#D1D5DB"     # Light gray borders
+        text      = "#111827"       # Dark slate primary text
+        subtext   = "#374151"       # Slate gray secondary text
+        accent    = "#3B82F6"       # Blue buttons
+        accent_hover = "#2563EB"    # Darker blue hover
+        input_bg  = "#FFFFFF"       # White input backgrounds
+        input_border = "#D1D5DB"    # Light gray input borders
+        hover_bg  = "#F3F4F6"       # Light hover background
+        success   = "#059669"       # Success green
+        danger    = "#DC2626"       # Danger red
+        cyan      = "#0369A1"       # Dark blue metric accent
+        tab_active = "#2563EB"      # Active tab blue
+        btn_text  = "#111111"       # Near-black button text
+
+    st.markdown(f"""
+    <style>
+    /* ── [CHANGED] Import Inter font for modern typography ── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    /* ── [CHANGED] Global app background & base text ── */
+    .stApp {{
+        background-color: {bg} !important;
+        color: {text} !important;
+        font-family: 'Inter', sans-serif !important;
+    }}
+
+    /* ── [CHANGED] All heading levels ── */
+    h1, h2, h3, h4, h5, h6,
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {{
+        color: {text} !important;
+        font-family: 'Inter', sans-serif !important;
+        font-weight: 700 !important;
+    }}
+
+    /* ── [CHANGED] Paragraph, label, span – using subtext for readability ── */
+    p, label, .stMarkdown p, .stMarkdown li {{
+        color: {subtext} !important;
+        font-family: 'Inter', sans-serif !important;
+    }}
+
+    /* ── [CHANGED] Bold text inside markdown should be brighter ── */
+    strong, b, .stMarkdown strong {{
+        color: {text} !important;
+    }}
+
+    /* ── [CHANGED] Sidebar styling ── */
+    section[data-testid="stSidebar"] {{
+        background-color: {sidebar} !important;
+        border-right: 1px solid {card_border} !important;
+    }}
+    section[data-testid="stSidebar"] .stMarkdown p,
+    section[data-testid="stSidebar"] .stMarkdown li,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] .stMarkdown {{
+        color: {subtext} !important;
+    }}
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3,
+    section[data-testid="stSidebar"] .stMarkdown h1,
+    section[data-testid="stSidebar"] .stMarkdown h2,
+    section[data-testid="stSidebar"] .stMarkdown h3 {{
+        color: {text} !important;
+    }}
+    /* Sidebar collapse button (inside open sidebar) */
+    section[data-testid="stSidebar"] button[kind="header"] {{
+        color: {text} !important;
+    }}
+    section[data-testid="stSidebar"] button[kind="header"] svg {{
+        fill: {text} !important;
+        stroke: {text} !important;
+    }}
+    /* [CHANGED] Sidebar expand/collapse arrow — comprehensive selectors
+       for ALL Streamlit versions. The arrow button uses various test IDs
+       and sits both inside and outside the sidebar element. */
+    div[data-testid="collapsedControl"],
+    div[data-testid="stSidebarCollapsedControl"],
+    div[data-testid*="collapse"],
+    div[data-testid*="Sidebar"] > button {{
+        color: {text} !important;
+    }}
+    div[data-testid="collapsedControl"] button,
+    div[data-testid="stSidebarCollapsedControl"] button,
+    div[data-testid*="collapse"] button {{
+        color: {text} !important;
+    }}
+    div[data-testid="collapsedControl"] svg,
+    div[data-testid="stSidebarCollapsedControl"] svg,
+    div[data-testid*="collapse"] svg,
+    button[kind="header"] svg {{
+        fill: {text} !important;
+        stroke: {text} !important;
+        color: {text} !important;
+    }}
+    /* Catch-all: any header-type button (collapse/expand arrows) */
+    button[kind="header"],
+    button[data-testid="baseButton-header"] {{
+        color: {text} !important;
+    }}
+    button[kind="header"] svg,
+    button[data-testid="baseButton-header"] svg {{
+        fill: {text} !important;
+        stroke: {text} !important;
+    }}
+
+    /* ── [CHANGED] Streamlit header / top bar ── */
+    header[data-testid="stHeader"] {{
+        background-color: {bg} !important;
+        border-bottom: 1px solid {card_border} !important;
+    }}
+    /* Deploy button and hamburger menu */
+    header[data-testid="stHeader"] button {{
+        color: {subtext} !important;
+    }}
+
+    /* ── [CHANGED] Selectbox / dropdown – fixes white-on-white text ── */
+    div[data-baseweb="select"] {{
+        background-color: {input_bg} !important;
+        border-radius: 8px !important;
+    }}
+    div[data-baseweb="select"] > div {{
+        background-color: {input_bg} !important;
+        border-color: {input_border} !important;
+        border-radius: 8px !important;
+        color: {text} !important;
+    }}
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] div[data-testid="stMarkdownContainer"] {{
+        color: {text} !important;
+    }}
+    /* Dropdown arrow icon */
+    div[data-baseweb="select"] svg {{
+        fill: {subtext} !important;
+    }}
+    /* Dropdown menu (opened) */
+    ul[data-testid="stSelectboxVirtualDropdown"],
+    div[data-baseweb="popover"] > div,
+    ul[role="listbox"] {{
+        background-color: {card} !important;
+        border: 1px solid {card_border} !important;
+        border-radius: 8px !important;
+    }}
+    /* Dropdown options */
+    li[role="option"] {{
+        color: {text} !important;
+        background-color: {card} !important;
+    }}
+    li[role="option"]:hover,
+    li[role="option"][aria-selected="true"] {{
+        background-color: {hover_bg} !important;
+        color: {text} !important;
+    }}
+    /* Highlighted option */
+    li[data-highlighted="true"],
+    li[aria-selected="true"] {{
+        background-color: {accent} !important;
+        color: #FFFFFF !important;
+    }}
+
+    /* ── [CHANGED] Text input – fixes invisible placeholder ── */
+    input[type="text"],
+    .stTextInput input,
+    div[data-baseweb="input"] input {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+        border-color: {input_border} !important;
+        border-radius: 8px !important;
+        caret-color: {text} !important;
+    }}
+    div[data-baseweb="input"] {{
+        background-color: {input_bg} !important;
+        border-color: {input_border} !important;
+        border-radius: 8px !important;
+    }}
+    /* Placeholder text */
+    input::placeholder {{
+        color: {subtext} !important;
+        opacity: 0.6 !important;
+    }}
+
+    /* ── [CHANGED] Number input ── */
+    .stNumberInput input,
+    input[type="number"] {{
+        background-color: {input_bg} !important;
+        color: {text} !important;
+        border-color: {input_border} !important;
+        border-radius: 8px !important;
+    }}
+    .stNumberInput button {{
+        background-color: {card} !important;
+        color: {text} !important;
+        border-color: {input_border} !important;
+    }}
+    .stNumberInput button:hover {{
+        background-color: {hover_bg} !important;
+    }}
+
+    /* ── [CHANGED] Radio buttons ── */
+    .stRadio label span,
+    .stRadio div[role="radiogroup"] label {{
+        color: {subtext} !important;
+    }}
+    .stRadio div[role="radiogroup"] label:hover {{
+        color: {text} !important;
+    }}
+
+    /* ── [CHANGED] Checkbox ── */
+    .stCheckbox label span {{
+        color: {subtext} !important;
+    }}
+
+    /* ── [CHANGED] Slider ── */
+    .stSlider label,
+    .stSlider p {{
+        color: {subtext} !important;
+    }}
+    .stSlider [data-testid="stThumbValue"] {{
+        color: {text} !important;
+    }}
+    div[data-baseweb="slider"] div[role="slider"] {{
+        background-color: {accent} !important;
+        border-color: {accent} !important;
+    }}
+
+    /* ── [CHANGED] Expander styling ── */
+    details[data-testid="stExpander"] {{
+        background-color: {card} !important;
+        border: 1px solid {card_border} !important;
+        border-radius: 8px !important;
+    }}
+    details[data-testid="stExpander"] summary {{
+        color: {text} !important;
+    }}
+    details[data-testid="stExpander"] summary span {{
+        color: {text} !important;
+    }}
+    details[data-testid="stExpander"] div[data-testid="stExpanderDetails"] {{
+        background-color: {card} !important;
+    }}
+    /* Expander arrow icon */
+    details[data-testid="stExpander"] summary svg {{
+        fill: {subtext} !important;
+    }}
+
+    /* ── [CHANGED] Tabs ── */
+    button[data-baseweb="tab"] {{
+        color: {subtext} !important;
+        font-weight: 600 !important;
+        font-family: 'Inter', sans-serif !important;
+        background-color: transparent !important;
+    }}
+    button[data-baseweb="tab"]:hover {{
+        color: {text} !important;
+    }}
+    button[data-baseweb="tab"][aria-selected="true"] {{
+        color: {tab_active} !important;
+    }}
+
+    /* ── [CHANGED] Buttons — text color is now theme-aware ── */
+    .stButton > button {{
+        background-color: {accent} !important;
+        color: {btn_text} !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        font-family: 'Inter', sans-serif !important;
+        transition: all 0.2s ease !important;
+        padding: 0.5rem 1rem !important;
+    }}
+    .stButton > button:hover {{
+        background-color: {accent_hover} !important;
+        color: {btn_text} !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+    }}
+    .stButton > button:active {{
+        transform: translateY(0) !important;
+    }}
+
+    /* ── [CHANGED] Download button ── */
+    .stDownloadButton > button {{
+        background-color: {card} !important;
+        color: {text} !important;
+        border: 1px solid {card_border} !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+    }}
+    .stDownloadButton > button:hover {{
+        background-color: {hover_bg} !important;
+        border-color: {accent} !important;
+    }}
+
+    /* ── [CHANGED] Metric cards (custom HTML) ── */
+    .metric-card {{
+        background: {card} !important;
+        border: 1px solid {card_border} !important;
+        padding: 24px !important;
+        border-radius: 12px !important;
+        margin: 10px 0 !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    }}
+    .metric-card:hover {{
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2) !important;
+    }}
+    .metric-value {{
+        font-size: 2rem !important;
+        font-weight: 800 !important;
+        color: {cyan} !important;
+        font-family: 'Inter', sans-serif !important;
+    }}
+    .metric-label {{
+        color: {text} !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+        margin-bottom: 4px !important;
+    }}
+    .metric-card p {{
+        color: {subtext} !important;
+        font-size: 0.85rem !important;
+        margin: 4px 0 0 0 !important;
+    }}
+
+    /* ── [CHANGED] Streamlit native metric widget ── */
+    div[data-testid="stMetric"] {{
+        background-color: {card} !important;
+        border: 1px solid {card_border} !important;
+        border-radius: 12px !important;
+        padding: 16px !important;
+    }}
+    div[data-testid="stMetric"] label {{
+        color: {subtext} !important;
+    }}
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {{
+        color: {text} !important;
+        font-weight: 700 !important;
+    }}
+    div[data-testid="stMetric"] div[data-testid="stMetricDelta"] {{
+        font-weight: 600 !important;
+    }}
+
+    /* ── [CHANGED] Dataframe / table ── */
+    .stDataFrame {{
+        border-radius: 8px !important;
+        overflow: hidden !important;
+    }}
+
+    /* ── [CHANGED] Info / Success / Warning / Error alert boxes ── */
+    .stAlert {{
+        border-radius: 8px !important;
+    }}
+    div[data-testid="stAlert"] p {{
+        color: inherit !important;
+    }}
+
+    /* ── [CHANGED] Progress bar ── */
+    .stProgress > div > div {{
+        background-color: {accent} !important;
+    }}
+
+    /* ── [CHANGED] Horizontal rule / divider ── */
+    hr {{
+        border-color: {card_border} !important;
+        opacity: 0.5 !important;
+    }}
+
+    /* ── [CHANGED] Markdown links ── */
+    a {{
+        color: {accent} !important;
+    }}
+    a:hover {{
+        color: {accent_hover} !important;
+    }}
+
+    /* ── [CHANGED] Tooltip ── */
+    div[data-baseweb="tooltip"] {{
+        background-color: {card} !important;
+        color: {text} !important;
+        border: 1px solid {card_border} !important;
+    }}
+
+    /* ── [CHANGED] Popover / BaseWeb menu overrides ── */
+    div[data-baseweb="popover"] {{
+        background-color: {card} !important;
+        border: 1px solid {card_border} !important;
+        border-radius: 8px !important;
+    }}
+    div[data-baseweb="menu"] {{
+        background-color: {card} !important;
+    }}
+    div[data-baseweb="menu"] li {{
+        color: {text} !important;
+    }}
+    div[data-baseweb="menu"] li:hover {{
+        background-color: {hover_bg} !important;
+    }}
+
+    /* ── [CHANGED] Scrollbar styling for dark mode ── */
+    ::-webkit-scrollbar {{
+        width: 8px !important;
+        height: 8px !important;
+    }}
+    ::-webkit-scrollbar-track {{
+        background: {bg} !important;
+    }}
+    ::-webkit-scrollbar-thumb {{
+        background: {card_border} !important;
+        border-radius: 4px !important;
+    }}
+    ::-webkit-scrollbar-thumb:hover {{
+        background: {subtext} !important;
+    }}
+
+    /* ── [CHANGED] Footer styling ── */
+    .footer-container {{
+        background: {card} !important;
+        border: 1px solid {card_border} !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+        text-align: center !important;
+        margin-top: 20px !important;
+    }}
+    .footer-container p {{
+        color: {subtext} !important;
+    }}
+    .footer-container strong {{
+        color: {text} !important;
+    }}
+
+    /* ── [CHANGED] Spinner text ── */
+    .stSpinner > div {{
+        color: {subtext} !important;
+    }}
+
+    /* ── [CHANGED] Label helper text (form labels above inputs) ── */
+    .stSelectbox label,
+    .stTextInput label,
+    .stNumberInput label,
+    .stSlider label,
+    .stRadio label,
+    .stCheckbox label,
+    div[data-testid="stWidgetLabel"] label,
+    div[data-testid="stWidgetLabel"] p {{
+        color: {subtext} !important;
+        font-weight: 500 !important;
+    }}
+
+    /* ── [CHANGED] Streamlit bottom toolbar / running indicator ── */
+    footer {{
+        visibility: hidden !important;
+    }}
+
+    </style>
+    """, unsafe_allow_html=True)
+
+
+
+# [CHANGED] Default theme set to 'Dark' to match config.toml dark theme
+for key, default in [('theme', 'Dark'), ('trained_models', {}),
                      ('data_loaded', False), ('demo_mode', False)]:
     if key not in st.session_state:
         st.session_state[key] = default
@@ -101,6 +569,85 @@ with st.sidebar:
 
 # ── Apply CSS ────────────────────────────────────────────────────────
 load_css(st.session_state.theme)
+
+# ── Dynamic Chart Theme ─────────────────────────────────────────────
+# [CHANGED] Expanded chart theme with legend font color, tick color,
+# and annotation color so ALL chart text adapts to the active theme.
+def get_chart_theme(theme):
+
+    if theme == "Dark":
+        return {
+            "template": "plotly_dark",
+            "bg": "#0E1117",
+            "paper_bg": "#0E1117",
+            "font": "#FFFFFF",
+            "grid": "rgba(255,255,255,0.1)",
+            "legend_font": "#FFFFFF",
+            "tick_font": "#D1D5DB",
+            "title_font": "#FFFFFF",
+            "annotation_font": "#D1D5DB",
+
+            "close": "#00E5FF",
+            "sma20": "#FFD166",
+            "sma50": "#06D6A0",
+            "sma200": "#EF476F"
+        }
+
+    else:
+        # [CHANGED] Light mode chart colors — all text is dark (#111827)
+        # so legend entries, axis ticks, and subplot titles are readable
+        return {
+            "template": "plotly_white",
+            "bg": "#F9FAFB",
+            "paper_bg": "#F9FAFB",
+            "font": "#111827",
+            "grid": "rgba(0,0,0,0.08)",
+            "legend_font": "#111827",
+            "tick_font": "#374151",
+            "title_font": "#111827",
+            "annotation_font": "#374151",
+
+            "close": "#1565C0",
+            "sma20": "#E65100",
+            "sma50": "#1B5E20",
+            "sma200": "#B71C1C"
+        }
+
+chart_theme = get_chart_theme(st.session_state.theme)
+
+
+# [CHANGED] Helper that applies full theme-aware styling to any Plotly
+# figure — prevents the "white legend on white background" bug that
+# occurred when charts had no explicit font/color overrides.
+def apply_chart_theme(fig, chart_theme, **extra_layout):
+    """Apply consistent theme styling to a Plotly figure."""
+    fig.update_layout(
+        template=chart_theme["template"],
+        paper_bgcolor=chart_theme["paper_bg"],
+        plot_bgcolor=chart_theme["bg"],
+        font=dict(color=chart_theme["font"], family="Inter, sans-serif"),
+        title_font=dict(color=chart_theme["title_font"], size=16),
+        legend=dict(
+            font=dict(color=chart_theme["legend_font"], size=12),
+            bgcolor="rgba(0,0,0,0)",
+        ),
+        **extra_layout,
+    )
+    fig.update_xaxes(
+        tickfont=dict(color=chart_theme["tick_font"]),
+        title_font=dict(color=chart_theme["font"]),
+        gridcolor=chart_theme["grid"],
+    )
+    fig.update_yaxes(
+        tickfont=dict(color=chart_theme["tick_font"]),
+        title_font=dict(color=chart_theme["font"]),
+        gridcolor=chart_theme["grid"],
+    )
+    # Update subplot annotation titles (e.g. "Price & Moving Averages")
+    for ann in fig.layout.annotations:
+        ann.update(font=dict(color=chart_theme["title_font"], size=14))
+    return fig
+
 
 # ── Helper: safe division ────────────────────────────────────────────
 def safe_pct(a, b):
@@ -221,13 +768,14 @@ elif load_button or st.session_state.data_loaded:
             row_heights=[0.4, 0.2, 0.2, 0.2])
 
         fig.add_trace(go.Scatter(x=df['date'], y=df['close'],
-            name='Close', line=dict(color='#FF6B6B', width=2)), row=1, col=1)
+            name='Close', line=dict(color=chart_theme["close"], width=2)), row=1, col=1)
+            
         fig.add_trace(go.Scatter(x=df['date'], y=df['sma_20'],
-            name='SMA 20', line=dict(color='#4ECDC4', width=1)), row=1, col=1)
+            name='SMA 20', line=dict(color=chart_theme["sma20"], width=1)), row=1, col=1)
         fig.add_trace(go.Scatter(x=df['date'], y=df['sma_50'],
-            name='SMA 50', line=dict(color='#95E1D3', width=1)), row=1, col=1)
+            name='SMA 50', line=dict(color=chart_theme["sma50"], width=1)), row=1, col=1)
         fig.add_trace(go.Scatter(x=df['date'], y=df['sma_200'],
-            name='SMA 200', line=dict(color='#F38181', width=1)), row=1, col=1)
+            name='SMA 200', line=dict(color=chart_theme["sma200"], width=1)), row=1, col=1)
 
         fig.add_trace(go.Scatter(x=df['date'], y=df['rsi'],
             name='RSI', line=dict(color='#FFD93D', width=2)), row=2, col=1)
@@ -248,7 +796,9 @@ elif load_button or st.session_state.data_loaded:
         fig.add_trace(go.Scatter(x=df['date'], y=df['bb_low'],
             name='BB Low', line=dict(color='#95E1D3', width=1)), row=4, col=1)
 
-        fig.update_layout(height=1000, showlegend=True, hovermode='x unified')
+        # [CHANGED] Use apply_chart_theme() for full theme coverage
+        apply_chart_theme(fig, chart_theme,
+            height=1000, showlegend=True, hovermode='x unified')
         fig.update_xaxes(title_text="Date", row=4, col=1)
         fig.update_yaxes(title_text="Price ($)", row=1, col=1)
         fig.update_yaxes(title_text="RSI", row=2, col=1)
@@ -372,7 +922,10 @@ elif load_button or st.session_state.data_loaded:
                         name=f'{labels[name]} Prediction',
                         line=dict(color=color, width=2, dash='dash')))
 
-            fig.update_layout(title="Multi-Model Price Predictions",
+            # [CHANGED] Apply full chart theme — was missing before,
+            # causing white legend text on white background in light mode
+            apply_chart_theme(fig, chart_theme,
+                title="Multi-Model Price Predictions",
                 xaxis_title="Date", yaxis_title="Price ($)",
                 height=600, hovermode='x unified')
             st.plotly_chart(fig, use_container_width=True)
@@ -431,7 +984,9 @@ elif load_button or st.session_state.data_loaded:
                     line=dict(color='#4ECDC4', width=2)))
                 fig.add_hline(y=initial_capital, line_dash="dash",
                               line_color="red", annotation_text="Initial")
-                fig.update_layout(title="Portfolio Value Over Time",
+                # [CHANGED] Apply full chart theme to equity curve
+                apply_chart_theme(fig, chart_theme,
+                    title="Portfolio Value Over Time",
                     xaxis_title="Date", yaxis_title="Value ($)", height=500)
                 st.plotly_chart(fig, use_container_width=True)
 
@@ -470,7 +1025,9 @@ elif load_button or st.session_state.data_loaded:
                 for metric in ['MAE', 'RMSE', 'MAPE (%)']:
                     fig.add_trace(go.Bar(name=metric,
                         x=comp_df['Model'], y=comp_df[metric]))
-                fig.update_layout(title="Model Metrics Comparison",
+                # [CHANGED] Apply full chart theme to model comparison
+                apply_chart_theme(fig, chart_theme,
+                    title="Model Metrics Comparison",
                     barmode='group', height=500)
                 st.plotly_chart(fig, use_container_width=True)
                 if len(rows) > 1:
@@ -498,10 +1055,11 @@ elif load_button or st.session_state.data_loaded:
                            mime="text/csv")
 
 # ── Footer ───────────────────────────────────────────────────────────
+# [CHANGED] Use footer-container class for proper dark mode styling
 st.markdown("---")
-st.markdown("""<div style='text-align:center;padding:20px;'>
+st.markdown("""<div class='footer-container'>
 <p> <strong>IntelliTrade AI</strong> — Stock Price Prediction &
 Automated Trading Strategy System</p>
 <p><small>Built with Streamlit | Data from Yahoo Finance |
 Models: LSTM, ARIMA, Prophet</small></p>
-</div>""", unsafe_allow_html=True)
+</div>""", unsafe_allow_html=True)
